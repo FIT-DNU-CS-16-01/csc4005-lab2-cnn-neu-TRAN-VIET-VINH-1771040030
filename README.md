@@ -1,140 +1,230 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/0XzoEsXD)
-# CSC4005 Lab 2 – CNN Image Classification (From Scratch vs Transfer)
+# Lab2: CNN Image Classification (From Scratch vs Transfer Learning)
 
-Starter kit này dành cho **Lab 2 của Bài 3 – CNN** trong CSC4005. Repo nối tiếp trực tiếp từ Lab 1:
-- **Lab 1:** MLP + training/regularization + W&B
-- **Lab 2:** CNN from scratch + transfer learning + W&B
+## 📝 Thông tin sinh viên
 
-Bài toán vẫn giữ nguyên: **phân loại 6 loại lỗi bề mặt thép** trên bộ **NEU-CLS.zip**.
+- **Họ tên:** Trần Việt Vinh
+- **MSSV:** 1771040030
+- **Môn học:** HOC SAU
 
-## 1. Mục tiêu
-Sinh viên cần:
-1. train được một **CNN from scratch**,
-2. chạy được một mô hình **transfer learning**,
-3. dùng **W&B** để log thí nghiệm,
-4. so sánh kết quả của **MLP baseline (Lab 1)**, **CNN scratch**, và **transfer learning**.
+---
 
-## 2. Cấu trúc repo
-```text
-csc4005_lab2_neu_cnn_starter/
+## 📁 Cấu trúc repo
+
+```
+csc4005-lab2-cnn-neu-TRAN-VIET-VINH-1771040030/
 ├── README.md
-├── REPORT_TEMPLATE.md
 ├── requirements.txt
+├── REPORT_LAB2.md
 ├── configs/
 │   ├── baseline_scratch.json
 │   └── baseline_transfer.json
-├── docs/
-│   ├── GITHUB_CLASSROOM_GUIDE.md
-│   ├── WANDB_GUIDE.md
-│   └── LAB_GUIDE_LAB2.md
-├── notebooks/
-│   └── lab2_demo.ipynb
-├── outputs/
 ├── src/
 │   ├── dataset.py
 │   ├── model.py
 │   ├── train.py
 │   └── utils.py
-└── ci/
-    ├── check_structure.py
-    └── smoke_train.py
+├── data/
+│   └── NEU-CLS.zip
+├── outputs/
+│   ├── cnn_small_baseline_offline/
+│   │   ├── best_model.pt
+│   │   ├── history.csv
+│   │   ├── curves.png
+│   │   ├── confusion_matrix.png
+│   │   └── metrics.json
+│   └── resnet18_transfer_offline/
+│       ├── best_model.pt
+│       ├── history.csv
+│       ├── curves.png
+│       ├── confusion_matrix.png
+│       └── metrics.json
+└── wandb/
+    ├── offline-run-20260416_151714-tn5l6ir0/
+    └── offline-run-20260416_154350-jkm1cwd7/
 ```
 
-## 3. Cài đặt
-### macOS / Linux
+---
+
+## 🛠️ Cài đặt môi trường
+
+**1. Tạo môi trường Conda (nếu chưa có)**
+
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
+conda create -n csc4005-dl python=3.10 -y
+conda activate csc4005-dl
+```
+
+**2. Cài thư viện**
+
+```bash
 pip install -r requirements.txt
 ```
 
-### Windows
+**3. Đăng nhập W&B (tùy chọn, nếu muốn log lên cloud)**
+
 ```bash
-python -m venv .venv
-.venv\Scriptsctivate
-pip install --upgrade pip
-pip install -r requirements.txt
+wandb login
+# Dán API key từ https://wandb.ai/authorize
 ```
 
-## 4. Dữ liệu
-Repo này **không chứa thư mục `data/`**. Khi chạy, sinh viên phải truyền dữ liệu ngoài repo qua `--data_dir`.
+---
 
-Hỗ trợ các kiểu dữ liệu sau:
-1. file ZIP như `NEU-CLS.zip`
-2. thư mục đã giải nén từ ZIP
-3. thư mục phẳng có tên file kiểu `crazing_10.jpg`, `inclusion_21.jpg`, ...
-4. thư mục theo lớp `Crazing/...`, `Inclusion/...`
+## 📂 Chuẩn bị dữ liệu
 
-Ví dụ:
+1. Tải file `NEU-CLS.zip` từ [NEU Surface Defect Database](http://faculty.neu.edu.cn/yunhyan/NEU_surface_defect_database.html)
+2. Tạo thư mục `data/` trong repo
+3. Đặt file `NEU-CLS.zip` vào thư mục `data/`
+
+```
+data/
+└── NEU-CLS.zip
+```
+
+Kiểm tra dữ liệu:
+
 ```bash
-python -m src.train --data_dir /duong_dan/NEU-CLS.zip --model_name cnn_small --train_mode scratch
+python -c "import zipfile; z = zipfile.ZipFile('./data/NEU-CLS.zip'); print('\n'.join(z.namelist()[:10]))"
 ```
 
-## 5. Chạy baseline CNN from scratch
+Kết quả mong đợi:
+
+```
+train/
+train/train/
+train/train/images/
+train/train/images/crazing_10.jpg
+...
+```
+
+---
+
+## 🚀 Chạy huấn luyện
+
+### 🔹 CNN from scratch
+
 ```bash
-python -m src.train   --data_dir /duong_dan/NEU-CLS.zip   --project csc4005-lab2-neu-cnn   --run_name cnn_small_baseline   --model_name cnn_small   --train_mode scratch   --optimizer adamw   --lr 0.001   --weight_decay 0.0001   --dropout 0.3   --epochs 20   --batch_size 32   --img_size 64   --patience 5   --augment   --use_wandb
+python -m src.train \
+  --data_dir ./data/NEU-CLS.zip \
+  --run_name cnn_small_baseline \
+  --model_name cnn_small \
+  --train_mode scratch \
+  --optimizer adamw \
+  --lr 0.001 \
+  --weight_decay 0.0001 \
+  --dropout 0.3 \
+  --epochs 20 \
+  --batch_size 32 \
+  --img_size 64 \
+  --patience 5 \
+  --augment
 ```
 
-## 6. Chạy transfer learning
-Ví dụ với ResNet18:
+### 🔹 Transfer Learning (ResNet18)
+
 ```bash
-python -m src.train   --data_dir /duong_dan/NEU-CLS.zip   --project csc4005-lab2-neu-cnn   --run_name resnet18_transfer   --model_name resnet18   --train_mode transfer   --optimizer adamw   --lr 0.001   --weight_decay 0.0001   --dropout 0.3   --epochs 10   --batch_size 32   --img_size 128   --patience 3   --augment   --use_wandb
+python -m src.train \
+  --data_dir ./data/NEU-CLS.zip \
+  --run_name resnet18_transfer \
+  --model_name resnet18 \
+  --train_mode transfer \
+  --optimizer adamw \
+  --lr 0.001 \
+  --weight_decay 0.0001 \
+  --dropout 0.3 \
+  --epochs 10 \
+  --batch_size 32 \
+  --img_size 128 \
+  --patience 3 \
+  --augment
 ```
 
-Muốn fine-tune cả backbone:
+### 🔹 Fine-tune ResNet18 (tùy chọn)
+
 ```bash
-python -m src.train   --data_dir /duong_dan/NEU-CLS.zip   --project csc4005-lab2-neu-cnn   --run_name resnet18_finetune   --model_name resnet18   --train_mode finetune   --optimizer adamw   --lr 0.0001   --weight_decay 0.0001   --dropout 0.3   --epochs 10   --batch_size 16   --img_size 128   --patience 3   --augment   --use_wandb
+python -m src.train \
+  --data_dir ./data/NEU-CLS.zip \
+  --run_name resnet18_finetune \
+  --model_name resnet18 \
+  --train_mode finetune \
+  --optimizer adamw \
+  --lr 0.0001 \
+  --weight_decay 0.0001 \
+  --dropout 0.3 \
+  --epochs 10 \
+  --batch_size 32 \
+  --img_size 128 \
+  --patience 3 \
+  --augment
 ```
 
-## 7. Output sau khi train
-Mỗi run sẽ tạo thư mục:
-```text
-outputs/<run_name>/
+---
+
+## 📊 Kết quả đạt được
+
+### CNN from scratch
+
+| Chỉ số | Giá trị |
+|--------|---------|
+| Best validation accuracy | 94.44% |
+| Test accuracy | 94.81% |
+| Thời gian trung bình/epoch | 3.45 giây |
+| Số lượng tham số | 32,614 |
+| Epoch đạt best | 14, 16, 18 |
+
+### Transfer Learning (ResNet18)
+
+| Chỉ số | Giá trị |
+|--------|---------|
+| Best validation accuracy | 96.67% |
+| Test accuracy | 96.30% |
+| Thời gian trung bình/epoch | 19.23 giây |
+| Số lượng tham số | 11,179,590 |
+| Epoch đạt best | 10 |
+
+---
+
+## 📈 Learning curves
+
+Sau khi chạy, learning curves được tự động lưu tại:
+
 ```
-bao gồm:
-- `best_model.pt`
-- `history.csv`
-- `curves.png`
-- `confusion_matrix.png`
-- `metrics.json`
-
-## 8. W&B
-Tên project thống nhất:
-```text
-csc4005-lab2-neu-cnn
+outputs/<run_name>/curves.png
 ```
 
-Log tối thiểu mỗi epoch:
-- train_loss
-- val_loss
-- train_acc
-- val_acc
-- lr
-- epoch_time_sec
+- CNN scratch: `outputs/cnn_small_baseline_offline/curves.png`
+- ResNet18 Transfer: `outputs/resnet18_transfer_offline/curves.png`
 
-Log cuối run:
-- best_val_acc
-- test_acc
-- avg_epoch_time_sec
-- total_params
-- trainable_params
-- confusion matrix image
-- curves image
+---
 
-## 9. Lưu ý về transfer learning
-Transfer learning trong starter kit dùng `torchvision`. Nếu gặp lỗi import `torchvision`, nguyên nhân thường là **torch / torchvision không tương thích phiên bản**.
+## 🔗 W&B Dashboard
 
-Khi đó:
-1. kiểm tra lại phiên bản torch và torchvision,
-2. cài lại theo đúng cặp phiên bản,
-3. vẫn có thể hoàn thành phần scratch CNN trước.
+Sau khi sync, có thể xem kết quả online tại:
 
-## 10. Checklist nộp bài
-- [ ] Có ít nhất 1 run CNN from scratch
-- [ ] Có ít nhất 1 run transfer learning
-- [ ] Có W&B dashboard
-- [ ] Có bảng so sánh MLP vs CNN scratch vs transfer
-- [ ] Có learning curves
-- [ ] Có confusion matrix
-- [ ] Có kết luận khi nào transfer learning tốt hơn
+| Mô hình | Link |
+|---------|------|
+| CNN from scratch | [tn5l6ir0](https://wandb.ai/vinhviettran955-no/csc4005-lab2-neu-cnn/runs/tn5l6ir0) |
+| ResNet18 Transfer | [jkm1cwd7](https://wandb.ai/vinhviettran955-no/csc4005-lab2-neu-cnn/runs/jkm1cwd7) |
+
+> **Lưu ý:** Cần đăng nhập bằng tài khoản `vinhviettran955-no` để xem dashboard.
+
+---
+
+## 📁 Cấu trúc thư mục output
+
+Sau khi chạy xong, mỗi run sẽ tạo một thư mục trong `outputs/`:
+
+```
+outputs/
+├── cnn_small_baseline_offline/
+│   ├── best_model.pt          # Model tốt nhất (theo val acc)
+│   ├── history.csv            # Lịch sử train/val theo từng epoch
+│   ├── curves.png             # Learning curves (loss & accuracy)
+│   ├── confusion_matrix.png   # Ma trận nhầm lẫn trên test set
+│   └── metrics.json           # Tổng hợp các metrics chính
+└── resnet18_transfer_offline/
+    ├── best_model.pt
+    ├── history.csv
+    ├── curves.png
+    ├── confusion_matrix.png
+    └── metrics.json
+```
